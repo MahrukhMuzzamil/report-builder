@@ -1,0 +1,352 @@
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+import java.awt.event.*;
+import java.io.File;
+import java.io.IOException;
+import javax.imageio.ImageIO;
+import javax.swing.table.TableCellEditor;
+import javax.swing.AbstractCellEditor;
+
+
+public class ReportBuilderApp {
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            ReportBuilderFrame mainFrame = new ReportBuilderFrame();
+            mainFrame.setVisible(true);
+        });
+    }
+}
+
+class ReportBuilderFrame extends JFrame {
+    public ReportBuilderFrame() {
+        setTitle("Report Builder");
+        setSize(800, 600);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+
+        JButton createReportButton = new JButton("Create Report");
+        createReportButton.addActionListener(e -> {
+            ReportEditorFrame reportEditorFrame = new ReportEditorFrame();
+            reportEditorFrame.setVisible(true);
+        });
+
+        JPanel mainPanel = new JPanel();
+        mainPanel.add(createReportButton);
+
+        add(mainPanel);
+    }
+}
+
+class ReportEditorFrame extends JFrame {
+    private JPanel dynamicContentPanel;
+
+    public ReportEditorFrame() {
+        setTitle("Report Editor");
+        setSize(800, 600);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setLocationRelativeTo(null);
+
+        // dynamicContentPanel = new JPanel(new GridLayout(0, 1)); // Use GridLayout with one column
+        dynamicContentPanel = new JPanel(null); // Allows absolute component positioning
+
+
+        JButton addTextButton = new JButton("Add Text");
+        JButton addTableButton = new JButton("Add Table");
+        JButton addChartButton = new JButton("Add Chart");
+        JButton addImageButton = new JButton("Add Image");
+
+        JPanel buttonPanel = new JPanel(new FlowLayout()); // Use FlowLayout for the button panel
+        buttonPanel.add(addTextButton);
+        buttonPanel.add(addTableButton);
+        buttonPanel.add(addChartButton);
+        buttonPanel.add(addImageButton);
+
+        addTextButton.addActionListener(e -> setDynamicContent(new TextPanel()));
+        addTableButton.addActionListener(e -> addTableComponent());
+        addChartButton.addActionListener(e -> setDynamicContent(new ChartPanel()));
+        addImageButton.addActionListener(e -> addImageComponent());
+
+        add(BorderLayout.NORTH, buttonPanel);
+        add(BorderLayout.CENTER, dynamicContentPanel);
+    }
+
+    private void setDynamicContent(JPanel contentPanel) {
+        dynamicContentPanel.add(contentPanel);
+        revalidate(); // Use revalidate instead of pack
+        repaint();
+    }
+
+    private void addTableComponent() {
+        int rows = getUserInput("Enter number of rows:");
+        int columns = getUserInput("Enter number of columns:");
+        if (rows > 0 && columns > 0) {
+            TablePanel tablePanel = new TablePanel(rows, columns);
+            dynamicContentPanel.add(tablePanel);
+            tablePanel.setLocation(10, 10); // Set an initial location
+            dynamicContentPanel.revalidate();
+            dynamicContentPanel.repaint();
+        }
+    }
+    private int getUserInput(String message) {
+        String input = JOptionPane.showInputDialog(this, message);
+        try {
+            return Integer.parseInt(input);
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Please enter a valid number.");
+            return 0;
+        }
+    }
+    private void setDynamicContent(JComponent comp) {
+        dynamicContentPanel.add(comp);
+        dynamicContentPanel.revalidate();
+        dynamicContentPanel.repaint();
+    }
+
+
+    private void addImageComponent() {
+        JFileChooser fileChooser = new JFileChooser();
+        int result = fileChooser.showOpenDialog(this);
+
+        if (result == JFileChooser.APPROVE_OPTION) {
+            File selectedFile = fileChooser.getSelectedFile();
+
+            try {
+                Image image = ImageIO.read(selectedFile);
+                ImagePanel imagePanel = new ImagePanel(image);
+                imagePanel.setSize(getWidth() / 2, getHeight() / 2);
+                setDynamicContent(imagePanel);
+            } catch (IOException e) {
+                JOptionPane.showMessageDialog(this, "Error loading image: " + e.getMessage());
+            }
+        }
+    }
+}
+
+
+
+
+
+class TextPanel extends JPanel {
+    private String addedText;
+    private Point textPosition;
+
+    public TextPanel() {
+        JButton addTextButton = new JButton("Add Text");
+        add(addTextButton);
+
+        addTextButton.addActionListener(e -> {
+            JTextArea textArea = new JTextArea();
+            textArea.setLineWrap(true);
+            textArea.setWrapStyleWord(true);
+            JScrollPane scrollPane = new JScrollPane(textArea);
+
+            int result = JOptionPane.showOptionDialog(
+                    this,
+                    scrollPane,
+                    "Enter Text:",
+                    JOptionPane.OK_CANCEL_OPTION,
+                    JOptionPane.PLAIN_MESSAGE,
+                    null,
+                    null,
+                    null
+            );
+
+            if (result == JOptionPane.OK_OPTION) {
+                addedText = textArea.getText();
+                textPosition = new Point(50, 50); // Set initial position
+                repaint();
+            }
+        });
+
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (addedText != null) {
+                    textPosition = new Point(e.getX(), e.getY());
+                    repaint();
+                }
+            }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (addedText != null) {
+                    textPosition = new Point(e.getX(), e.getY());
+                    repaint();
+                }
+            }
+        });
+
+        addMouseMotionListener(new MouseAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                if (addedText != null) {
+                    textPosition = new Point(e.getX(), e.getY());
+                    repaint();
+                }
+            }
+        });
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+
+        if (addedText != null) {
+            g.drawString(addedText, textPosition.x, textPosition.y);
+        }
+    }
+}
+
+class TablePanel extends JPanel {
+    private JTable table;
+    private Point draggingAnchor;
+
+    public TablePanel(int rows, int columns) {
+        setLayout(null); // Use a null layout for absolute positioning
+
+        // Set fixed cell size
+        int cellHeight = 40;
+        int cellWidth = 100; // 15 pixels for both width and height
+
+        // Calculate the table size
+        int tableWidth = columns * cellWidth;
+        int tableHeight = rows * cellHeight;
+
+        // Initialize the table with the specified number of rows and columns
+        DefaultTableModel model = new DefaultTableModel(rows, columns);
+        table = new JTable(model);
+        table.setFillsViewportHeight(true);
+        table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF); // Disable auto-resizing
+        table.setDefaultEditor(Object.class, new MultilineTableCellEditor());
+
+        // Set the size of each cell
+        for (int i = 0; i < columns; i++) {
+            table.getColumnModel().getColumn(i).setPreferredWidth(cellWidth);
+        }
+        table.setRowHeight(cellHeight);
+
+        // Set the size and position of the table
+        table.setBounds(0, 0, tableWidth, tableHeight);
+
+        // Add the table to the panel
+        add(table);
+
+        // Set the size of the panel to fit the table
+        setPreferredSize(new Dimension(tableWidth, tableHeight));
+        setBounds(0, 0, tableWidth, tableHeight);
+
+        // Mouse listener for dragging the panel, added to the table
+        MouseAdapter mouseAdapter = new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                draggingAnchor = new Point(e.getX(), e.getY());
+            }
+
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                // The new location is the current location plus the distance dragged
+                int deltaX = e.getXOnScreen() - (getLocationOnScreen().x + draggingAnchor.x);
+                int deltaY = e.getYOnScreen() - (getLocationOnScreen().y + draggingAnchor.y);
+                setLocation(getX() + deltaX, getY() + deltaY);
+            }
+        };
+
+        // Add mouse listeners to the table
+        table.addMouseListener(mouseAdapter);
+        table.addMouseMotionListener(mouseAdapter);
+    }
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        // Draw a rectangle in the bottom right corner to represent the resize handle
+        g.setColor(Color.GRAY);
+        g.fillRect(getWidth() - 10, getHeight() - 10, 10, 10);
+        g.setColor(Color.BLACK);
+        g.drawRect(getWidth() - 10, getHeight() - 10, 10, 10);
+    }
+
+    @Override
+    public void setBounds(int x, int y, int width, int height) {
+        super.setBounds(x, y, width, height);
+        // Adjust the size of the table to fit the new bounds of the panel
+        table.setSize(width, height);
+    }
+    public void resizeTable(int width, int height) {
+        setBounds(getX(), getY(), width, height);
+        revalidate();
+        repaint();
+    }
+}
+class MultilineTableCellEditor extends AbstractCellEditor implements TableCellEditor {
+    JScrollPane scrollPane;
+    JTextArea textArea;
+
+    public MultilineTableCellEditor() {
+        textArea = new JTextArea();
+        textArea.setLineWrap(true);
+        textArea.setWrapStyleWord(true);
+        scrollPane = new JScrollPane(textArea);
+    }
+
+    @Override
+    public Object getCellEditorValue() {
+        return textArea.getText();
+    }
+
+    @Override
+    public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
+        textArea.setText((value != null) ? value.toString() : "");
+        return scrollPane;
+    }
+}
+
+
+class ChartPanel extends JPanel {
+    // ... (unchanged)
+}
+
+class ImagePanel extends JPanel {
+    private Image image;
+
+    public ImagePanel(Image image) {
+        this.image = image;
+        setLayout(null); // Use null layout for free dragging
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                // Store the initial position of the panel
+                ImagePanel.this.putClientProperty("initialX", e.getX());
+                ImagePanel.this.putClientProperty("initialY", e.getY());
+            }
+        });
+
+        addMouseMotionListener(new MouseAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                // Calculate the new position of the panel
+                int initialX = (int) ImagePanel.this.getClientProperty("initialX");
+                int initialY = (int) ImagePanel.this.getClientProperty("initialY");
+                int deltaX = e.getX() - initialX;
+                int deltaY = e.getY() - initialY;
+
+                // Move the panel to the new position
+                Point location = ImagePanel.this.getLocation();
+                ImagePanel.this.setLocation(location.x + deltaX, location.y + deltaY);
+
+                // Update the initial position for the next drag
+                ImagePanel.this.putClientProperty("initialX", e.getX());
+                ImagePanel.this.putClientProperty("initialY", e.getY());
+            }
+        });
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+
+        if (image != null) {
+            g.drawImage(image, 0, 0, getWidth() /2  , getHeight() /2, this);
+        }
+    }
+}
