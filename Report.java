@@ -13,6 +13,8 @@ public class Report extends JFrame {
     protected JPanel sidebarPanel;
     protected JPanel contentPanel;
     protected TablePanel tablePanel;
+    protected TextPanel textPanel;
+    protected ImagePanel imagePanel;
 
     public Report() {
         initializeComponents();
@@ -23,6 +25,8 @@ public class Report extends JFrame {
         pieChartPanel = new PieChartPanel();
         barGraphPanel = new BarGraphPanel();
         tablePanel = new TablePanel();
+        textPanel=new TextPanel();
+        imagePanel=new ImagePanel();
     }
     private void setupUI() {
         setSize(800, 600);
@@ -36,23 +40,26 @@ public class Report extends JFrame {
 
         JButton pieChartButton = createPieChartButton("Pie Chart");
         JButton barGraphButton = createBarGraphButton("Bar Graph");
+        JButton imageButton = createImageButton("Image");  // Move this line before lineGraphButton
         JButton lineGraphButton = createLineGraphButton("Line Graph");
         JButton textButton = createtextButton("Text");
         JButton tableButton = createTableButton("Table");
 
         sidebarPanel.add(pieChartButton);
         sidebarPanel.add(barGraphButton);
+        sidebarPanel.add(imageButton);
         sidebarPanel.add(lineGraphButton);
         sidebarPanel.add(textButton);
         sidebarPanel.add(tableButton);
 
-        contentPanel.setSize((int) Math.round(8.27 * 72), (int) Math.round(11.69 * 72));
+
+        //contentPanel.setSize((int) Math.round(8.27 * 72), (int) Math.round(11.69 * 72));
 
         getContentPane().add(BorderLayout.WEST, sidebarPanel);
         getContentPane().add(BorderLayout.CENTER, contentPanel);
 
         JScrollPane scrollPane = new JScrollPane(contentPanel);
-        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        //scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         getContentPane().add(BorderLayout.CENTER, scrollPane);
 
         setVisible(true);
@@ -74,6 +81,33 @@ public class Report extends JFrame {
 
         // Add right-click context menu
         JPopupMenu contextMenu = createPieChartContextMenu();
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (SwingUtilities.isRightMouseButton(e)) {
+                    contextMenu.show(button, e.getX(), e.getY());
+                }
+            }
+        });
+
+        return button;
+    }
+    private JButton createImageButton(String text) {
+        JButton button = new JButton(text);
+        button.setForeground(Color.WHITE);
+        button.setBackground(Color.DARK_GRAY);
+        button.setFocusPainted(false);
+        button.setBorderPainted(false);
+        button.setAlignmentX(Component.CENTER_ALIGNMENT);
+        button.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                contentPanel.add(imagePanel);
+            }
+        });
+
+        // Add right-click context menu
+        JPopupMenu contextMenu = createImageContextMenu();
         button.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -169,7 +203,6 @@ public class Report extends JFrame {
         button.setBorderPainted(false);
         button.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Add right-click context menu
         JPopupMenu contextMenu = createtextContextMenu();
         button.addMouseListener(new MouseAdapter() {
             @Override
@@ -179,7 +212,9 @@ public class Report extends JFrame {
                 }
             }
         });
-
+        button.addActionListener(e->{
+            contentPanel.add(textPanel);
+        });
         return button;
     }
 
@@ -271,6 +306,21 @@ public class Report extends JFrame {
         menu.add(menuItem);
         menu.add(menuItem1);
         menu.add(menuItem2);
+        menuItem.addActionListener(e -> {
+            textPanel.addText();
+        });
+        menuItem1.addActionListener(e->{
+            textPanel.loadText();
+        });
+        return menu;
+    }
+    private JPopupMenu createImageContextMenu() {
+        JPopupMenu menu = new JPopupMenu();
+        JMenuItem menuItem = new JMenuItem("Add new");
+        menu.add(menuItem);
+        menuItem.addActionListener(e -> {
+            imagePanel.addImage();
+        });
 
         return menu;
     }

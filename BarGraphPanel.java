@@ -16,8 +16,9 @@ import java.util.HashMap;
 import java.util.Objects;
 
 public class BarGraphPanel extends JPanel {
-    private int barWidth = 100;
-    private int barHeight = 50;
+    private int barWidth = 50;
+    private int barHeight = 25;
+    private double chartScaleFactor = 0.8;
     private int barX = 50;
     private int barY = 100;
     private Point dragStart;
@@ -38,53 +39,32 @@ public class BarGraphPanel extends JPanel {
         barGraph = new BarGraph();
         barGraphData = new HashMap<>();
 
-//        JButton loadFileButton = new JButton("Load From File");
-//        loadFileButton.addActionListener(new ActionListener() {
-//            @Override
-//            public void actionPerformed(ActionEvent e) {
-//                axisNames=new String[3];
-//                barGraphData= DataAccess.CsvDAO.loadBarChartData(axisNames);
-//                assert axisNames[2]!=null;
-//                numberOfBars=Integer.parseInt(axisNames[2]);
-//                CategoryPlot plot = (CategoryPlot) barChart.getPlot();
-//                plot.getDomainAxis().setLabel(axisNames[0]);
-//                plot.getRangeAxis().setLabel(axisNames[1]);
-//                barGraph.loadData(barGraphData);
-//                xAxisLabel=axisNames[0];
-//                yAxisLabel=axisNames[1];
-//                series= barGraph.getSeriesNames();
-//                barChart = barGraph.createBarChart("Bar Chart", axisNames[0], axisNames[1]);
-//                CategoryPlot plot1 = (CategoryPlot) barChart.getPlot();
-//                plot.getDomainAxis().setCategoryMargin(0.2); // Adjust the margin as needed
-//            }
-//        });
-
-//        JButton addDataButton = new JButton("Add Data");
-//        addDataButton.addActionListener(new ActionListener() {
-//            @Override
-//            public void actionPerformed(ActionEvent e) {
-//                collectUserData();
-//                updateChart();
-//            }
-//        });
-
-//        JButton saveButton = new JButton("Save Bar Graph Data");
-//        saveButton.addActionListener(new ActionListener() {
-//            @Override
-//            public void actionPerformed(ActionEvent e) {
-//                saveBarGraph();
-//            }
-//        });
 
         barChart = barGraph.createBarChart("Bar Chart", xAxisLabel, yAxisLabel);
         CategoryPlot plot = (CategoryPlot) barChart.getPlot();
         plot.getDomainAxis().setCategoryMargin(0);
 
         chartPanel = new ChartPanel(barChart);
-//        this.add(loadFileButton);
-//        this.add(addDataButton);
-//        this.add(saveButton);
-        add(chartPanel, BorderLayout.CENTER);
+
+        setLayout(new FlowLayout(FlowLayout.CENTER, 0, 0));
+
+        setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        chartPanel.setPreferredSize(new Dimension(
+                (int) (chartPanel.getPreferredSize().width * chartScaleFactor),
+                (int) (chartPanel.getPreferredSize().height * chartScaleFactor)
+        ));
+
+        add(chartPanel);
+
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (SwingUtilities.isRightMouseButton(e)) {
+                    createContextMenu().show(BarGraphPanel.this, e.getX(), e.getY());
+                }
+            }
+        });
 
         addMouseListener(new MouseAdapter() {
             @Override
@@ -128,6 +108,16 @@ public class BarGraphPanel extends JPanel {
             }
         });
     }
+    private JPopupMenu createContextMenu() {
+        JPopupMenu menu = new JPopupMenu();
+        JMenuItem menuItem = new JMenuItem("Save");
+        menu.add(menuItem);
+
+        menuItem.addActionListener(e -> {
+            CsvDAO.saveBarChartData(axisNames[0],axisNames[1],numberOfBars,barGraphData,this);
+        });
+        return menu;
+    }
     private boolean isInsideBar(Point point) {
         return point.x >= barX && point.x <= barX + barWidth &&
                 point.y >= barY && point.y <= barY + barHeight;
@@ -145,7 +135,7 @@ public class BarGraphPanel extends JPanel {
     }
 
     private void updateChart() {
-        barChart = barGraph.createBarChart("Bar Chart", xAxisLabel, yAxisLabel);
+        barChart = barGraph.createBarChart("", xAxisLabel, yAxisLabel);
         chartPanel.setChart(barChart);
     }
 
@@ -235,9 +225,5 @@ public class BarGraphPanel extends JPanel {
         barChart = barGraph.createBarChart("Bar Chart", axisNames[0], axisNames[1]);
         CategoryPlot plot1 = (CategoryPlot) barChart.getPlot();
         plot.getDomainAxis().setCategoryMargin(0.2); // Adjust the margin as needed
-    }
-
-    public void saveBarGraph(Report report) {
-        CsvDAO.saveBarChartData(xAxisLabel, yAxisLabel, numberOfBars, barGraphData, report);
     }
 }
