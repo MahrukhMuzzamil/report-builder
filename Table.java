@@ -23,6 +23,9 @@ public class Table {
     public void setCols(int c){
         col=c;
     }
+    public void setDataSet(String[][]d){
+        tableData=d;
+    }
     public String[][] getTableData(){
         return tableData;
     }
